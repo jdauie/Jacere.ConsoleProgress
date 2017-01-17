@@ -2,13 +2,12 @@
 <package >
   <metadata>
     <id>Jacere.ConsoleProgress</id>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <authors>jdauie</authors>
     <owners>jdauie</owners>
     <projectUrl>https://github.com/jdauie/console-progress</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>Console progress indicator</description>
-    <releaseNotes>Initial release</releaseNotes>
     <copyright>Copyright 2017</copyright>
     <tags>console progress</tags>
   </metadata>
