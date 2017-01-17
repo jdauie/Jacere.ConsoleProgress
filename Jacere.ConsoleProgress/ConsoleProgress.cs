@@ -57,7 +57,7 @@ namespace Jacere.ConsoleProgress
             {
                 parts.Add($"{itemsPerMinute} items/m");
             }
-            if (progressCount <= _totalCount)
+            if (progressCount <= _totalCount && progressCount > skipCount)
             {
                 var remainingSeconds = elapsed.TotalSeconds * ((_totalCount - skipCount) - (progressCount - skipCount)) / (progressCount - skipCount);
                 parts.Add($@"{TimeSpan.FromSeconds(remainingSeconds):dd\.hh\:mm\:ss} remaining");
