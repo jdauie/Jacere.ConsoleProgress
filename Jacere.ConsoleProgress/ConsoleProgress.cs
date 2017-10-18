@@ -138,7 +138,7 @@ namespace Jacere.ConsoleProgress
                 ? $"({string.Join(", ", additionalParts)})"
                 : "";
 
-            Console.Write($"{new string(' ', 80)}\r");
+            Console.Write($"{new string(' ', Console.BufferWidth)}\r");
             Console.Write($"{_title}: {progressCount} {additionalInfo}\r");
         }
 
@@ -153,7 +153,7 @@ namespace Jacere.ConsoleProgress
             _task.GetAwaiter().GetResult();
             var totalTime = DateTime.UtcNow - _startTime;
 
-            Console.Write($"{new string(' ', 80)}\r");
+            Console.Write($"{new string(' ', Console.BufferWidth)}\r");
             Console.WriteLine($@"{_title}: {_progressCount} in {totalTime:dd\.hh\:mm\:ss}");
         }
     }

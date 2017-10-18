@@ -1,1 +1,1 @@
-# console-progress
+# Jacere.ConsoleProgress
