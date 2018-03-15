@@ -8,8 +8,7 @@ namespace Jacere.ConsoleProgress
 {
     public class ConsoleProgress : IDisposable
     {
-        private const int UpdateInterval = 100;
-
+        private readonly int _updateInterval;
         private readonly string _title;
         private readonly DateTime _startTime;
         private readonly bool _showRate;
@@ -21,8 +20,9 @@ namespace Jacere.ConsoleProgress
         private bool _dirty;
         private bool _disposing;
 
-        public ConsoleProgress(string title, int totalCount = 0, bool showRate = true)
+        public ConsoleProgress(string title, int totalCount = 0, bool showRate = true, int updateInterval = 100)
         {
+            _updateInterval = updateInterval;
             _title = title;
             _startTime = DateTime.UtcNow;
             _totalCount = totalCount;
@@ -44,7 +44,7 @@ namespace Jacere.ConsoleProgress
                 {
                     Write();
                 }
-                await Task.Delay(UpdateInterval);
+                await Task.Delay(_updateInterval);
             }
         }
 
@@ -138,8 +138,8 @@ namespace Jacere.ConsoleProgress
                 ? $"({string.Join(", ", additionalParts)})"
                 : "";
 
-            Console.Write($"{new string(' ', Console.BufferWidth)}\r");
-            Console.Write($"{_title}: {progressCount} {additionalInfo}\r");
+            Console.Write($"\r{new string(' ', Console.BufferWidth)}");
+            Console.Write($"\r{_title}: {progressCount} {additionalInfo}");
         }
 
         public void Dispose()
@@ -153,7 +153,7 @@ namespace Jacere.ConsoleProgress
             _task.GetAwaiter().GetResult();
             var totalTime = DateTime.UtcNow - _startTime;
 
-            Console.Write($"{new string(' ', Console.BufferWidth)}\r");
+            Console.Write($"\r{new string(' ', Console.BufferWidth)}");
             Console.WriteLine($@"{_title}: {_progressCount} in {totalTime:dd\.hh\:mm\:ss}");
         }
     }
