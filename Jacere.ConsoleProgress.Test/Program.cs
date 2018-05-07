@@ -7,6 +7,8 @@ namespace Jacere.ConsoleProgress.Test
     {
         public static async Task Main(string[] args)
         {
+            Console.WriteLine("before");
+
             const int count = 100;
 
             using (var progress = new ConsoleProgress("test", count))
@@ -17,6 +19,8 @@ namespace Jacere.ConsoleProgress.Test
                     progress.Increment();
                 }
             }
+
+            Console.WriteLine("after");
         }
     }
 }

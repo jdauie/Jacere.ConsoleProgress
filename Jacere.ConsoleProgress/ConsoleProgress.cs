@@ -153,7 +153,7 @@ namespace Jacere.ConsoleProgress
             _task.GetAwaiter().GetResult();
             var totalTime = DateTime.UtcNow - _startTime;
 
-            Console.Write($"{new string(' ', Console.BufferWidth)}\r");
+            Console.Write($"{new string(' ', Console.BufferWidth - 1)}\r");
             Console.WriteLine($@"{_title}: {_progressCount} in {totalTime:dd\.hh\:mm\:ss}");
         }
     }
