@@ -12,24 +12,22 @@ namespace Jacere.ConsoleProgress
         private readonly string _title;
         private readonly DateTime _startTime;
         private readonly bool _showRate;
-        private readonly Dictionary<string, int> _counts;
+        private readonly Dictionary<string, long> _counts;
         private readonly Task _task;
-        private int _totalCount;
-        private int _progressCount;
-        private int _skipCount;
+        private long _totalCount;
+        private long _progressCount;
         private bool _dirty;
         private bool _disposing;
 
-        public ConsoleProgress(string title, int totalCount = 0, bool showRate = true, int updateInterval = 100)
+        public ConsoleProgress(string title, long totalCount = 0, bool showRate = true, int updateInterval = 100)
         {
             _updateInterval = updateInterval;
             _title = title;
             _startTime = DateTime.UtcNow;
             _totalCount = totalCount;
             _showRate = showRate;
-            _counts = new Dictionary<string, int>();
+            _counts = new Dictionary<string, long>();
             _progressCount = 0;
-            _skipCount = 0;
             _dirty = true;
             _disposing = false;
 
@@ -48,18 +46,18 @@ namespace Jacere.ConsoleProgress
             }
         }
 
-        private IEnumerable<string> GetRemainingTimeEstimate(int progressCount, int skipCount)
+        private IEnumerable<string> GetRemainingTimeEstimate(long progressCount)
         {
             var elapsed = DateTime.UtcNow - _startTime;
-            var itemsPerMinute = (int)(progressCount / elapsed.TotalMinutes);
+            var itemsPerMinute = (long)(progressCount / elapsed.TotalMinutes);
             var parts = new List<string>();
             if (_showRate)
             {
                 parts.Add($"{itemsPerMinute} items/m");
             }
-            if (progressCount <= _totalCount && progressCount > skipCount)
+            if (progressCount <= _totalCount)
             {
-                var remainingSeconds = elapsed.TotalSeconds * ((_totalCount - skipCount) - (progressCount - skipCount)) / (progressCount - skipCount);
+                var remainingSeconds = elapsed.TotalSeconds * (_totalCount - progressCount) / progressCount;
                 parts.Add($@"{TimeSpan.FromSeconds(remainingSeconds):dd\.hh\:mm\:ss} remaining");
             }
             else
@@ -69,29 +67,25 @@ namespace Jacere.ConsoleProgress
             return parts;
         }
 
-        public void SetTotal(int count)
+        public void SetTotal(long count)
         {
             Interlocked.Exchange(ref _totalCount, count);
             _dirty = true;
         }
 
-        public void Increment(bool skipped = false)
+        public void Increment()
         {
             Interlocked.Increment(ref _progressCount);
-            if (skipped)
-            {
-                Interlocked.Increment(ref _skipCount);
-            }
             _dirty = true;
         }
 
-        public void Add(int value)
+        public void Add(long value)
         {
             Interlocked.Add(ref _progressCount, value);
             _dirty = true;
         }
 
-        public void Set(int value)
+        public void Set(long value)
         {
             Interlocked.Exchange(ref _progressCount, value);
             _dirty = true;
@@ -116,7 +110,6 @@ namespace Jacere.ConsoleProgress
 
         private void Write()
         {
-            var skipCount = _skipCount;
             var progressCount = _progressCount;
             var additionalParts = new List<string>();
 
@@ -132,7 +125,7 @@ namespace Jacere.ConsoleProgress
 
             if (_totalCount > 0 && progressCount > 0)
             {
-                additionalParts.AddRange(GetRemainingTimeEstimate(progressCount, skipCount));
+                additionalParts.AddRange(GetRemainingTimeEstimate(progressCount));
             }
             var additionalInfo = additionalParts.Any()
                 ? $"({string.Join(", ", additionalParts)})"
