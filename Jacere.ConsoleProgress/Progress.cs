@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -24,7 +26,7 @@ namespace Jacere.ConsoleProgress
         private static readonly TimeSpan SpinnerProgressInterval = TimeSpan.FromMilliseconds(100);
 
         private readonly WriterContext _console;
-        private readonly Spinner _spinner;
+        private readonly ProgressBar _progressBar;
         private readonly Task _task;
         private readonly DateTime _init;
 
@@ -63,7 +65,7 @@ namespace Jacere.ConsoleProgress
         protected Progress(string name) : base(name)
         {
             _console = WriterContext.FromConsole(new Writer());
-            _spinner = new Spinner(SpinnerProgressInterval);
+            _progressBar = new ProgressBar(SpinnerProgressInterval);
             _init = DateTime.UtcNow;
             _task = UpdateDisplay(_source.Token);
         }
@@ -89,6 +91,17 @@ namespace Jacere.ConsoleProgress
         {
             var writer = _console.Write("");
 
+            // todo: integrate this?
+            Console.CursorVisible = false;
+
+            foreach (var componentWriter in GetComponentWriters())
+            {
+                componentWriter.Write(writer, color);
+            }
+        }
+
+        private IEnumerable<ProgressWriter> GetComponentWriters()
+        {
             var start = _init;
 
             var progress = 0.0;
@@ -101,32 +114,15 @@ namespace Jacere.ConsoleProgress
                 // todo: estimate remaining time
             }
 
-            var progressBackgroundChar = '\u2593';
+            yield return _progressBar.Create(progress);
 
-            var progressWidth = (int)(progress * writer.WindowWidth);
-
-            var spinner = "";
-            if (progress < 1)
-            {
-                spinner = _spinner.ToString();
-            }
-
-            // todo: integrate this?
-            Console.CursorVisible = false;
-
-            var progressInfoLeft = $" {progress:P} ({Current} of {count}) {Name}";
-            var progressInfoRight = $"(started {start:O}) {DateTime.UtcNow - start:dd\\.hh\\:mm\\:ss} ";
-
-            writer
-                .Background(color).Write("".PadRight(progressWidth))
-                .Foreground(color).Write(spinner)
-                .WriteLine("".PadRight(writer.WindowWidth - progressWidth - spinner.Length, progressBackgroundChar))
-                .Foreground(color).WriteLine($"{progressInfoLeft}{"".PadRight(writer.WindowWidth - progressInfoLeft.Length - progressInfoRight.Length)}{progressInfoRight}")
-                ;
+            yield return ProgressText.Create(
+                $" {progress:P} ({Current} of {count}) {Name}",
+                $"(started {start:O}) {DateTime.UtcNow - start:dd\\.hh\\:mm\\:ss} ");
 
             foreach (var counter in _counters.Values)
             {
-                writer.WriteLine($"  {counter.Name}: {counter.FormattedValue}");
+                yield return ProgressText.CreateUncolored($"  {counter.Name}: {counter.FormattedValue}");
             }
         }
 
@@ -141,12 +137,6 @@ namespace Jacere.ConsoleProgress
             _task.Wait();
 
             _source.Dispose();
-
-            // todo: show different output for !/complete, depending on settings
-
-            //var totalTime = DateTime.UtcNow - _init;
-
-            // todo: turn progress bar green, for instance?
 
             Write(ConsoleColor.Green);
         }
