@@ -54,7 +54,9 @@ namespace Jacere.ConsoleProgress.Test
 
             using (var progress = Progress.Known<File>("test", count))
             {
-                progress.Counter("size").Format(x => $"{x:n0} ({x.BytesToString()})");
+                progress.Counter("size")
+                    .Format(x => $"{x.Current:n0} ({x.Current.BytesToString(2)} of {x.Total.Value.BytesToString(2)})")
+                    .SetCount(totalSize);
 
                 foreach (var file in files)
                 {

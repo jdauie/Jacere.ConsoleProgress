@@ -2,7 +2,7 @@
 
 namespace Jacere.ConsoleProgress
 {
-    public interface ICount
+    public interface ICountable
     {
         DateTime? Started { get; }
         long? Count { get; }

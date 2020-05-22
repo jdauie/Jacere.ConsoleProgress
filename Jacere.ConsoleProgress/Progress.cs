@@ -20,23 +20,13 @@ namespace Jacere.ConsoleProgress
 
     public class Progress : ProgressCounter, IDisposable
     {
-        private const string ProgressIndicatorChars = @"/-\|";
-
         private static readonly TimeSpan UpdateInterval = TimeSpan.FromMilliseconds(20);
         private static readonly TimeSpan SpinnerProgressInterval = TimeSpan.FromMilliseconds(100);
 
         private readonly WriterContext _console;
+        private readonly Spinner _spinner;
         private readonly Task _task;
         private readonly DateTime _init;
-        private DateTime? _start;
-
-        private ICount _countable;
-        private long? _total;
-        private bool _complete;
-        private char _lastProgressIndicator = ProgressIndicatorChars[0];
-        private DateTime _lastProgressIndicatorTime;
-
-        // todo: start time
 
         private readonly ConcurrentDictionary<string, ProgressCounter> _counters = new ConcurrentDictionary<string, ProgressCounter>();
 
@@ -56,14 +46,14 @@ namespace Jacere.ConsoleProgress
             return progress;
         }
 
-        public static Progress Unknown(string name, ICount countable)
+        public static Progress Unknown(string name, ICountable countable)
         {
             var progress = new Progress(name);
             progress.SetCount(countable);
             return progress;
         }
 
-        public static Progress<T> Unknown<T>(string name, ICount countable)
+        public static Progress<T> Unknown<T>(string name, ICountable countable)
         {
             var progress = new Progress<T>(name);
             progress.SetCount(countable);
@@ -73,6 +63,7 @@ namespace Jacere.ConsoleProgress
         protected Progress(string name) : base(name)
         {
             _console = WriterContext.FromConsole(new Writer());
+            _spinner = new Spinner(SpinnerProgressInterval);
             _init = DateTime.UtcNow;
             _task = UpdateDisplay(_source.Token);
         }
@@ -81,7 +72,7 @@ namespace Jacere.ConsoleProgress
         {
             while (!token.IsCancellationRequested)
             {
-                WriteStuff(ConsoleColor.Yellow);
+                Write(ConsoleColor.Yellow);
 
                 try
                 {
@@ -94,46 +85,33 @@ namespace Jacere.ConsoleProgress
             }
         }
 
-        private void WriteStuff(ConsoleColor color)
+        private void Write(ConsoleColor color)
         {
             var writer = _console.Write("");
 
             var start = _init;
 
             var progress = 0.0;
-            var count = _countable?.Count ?? _total;
+            var count = Countable?.Count;
             if (count.HasValue)
             {
                 progress = Math.Min((double)Current / count.Value, 1.0);
 
-                start = _countable?.Started ?? _start.Value;
+                start = Countable.Started.Value;
                 // todo: estimate remaining time
-            }
-            else
-            {
-                //var start = _init;
             }
 
             var progressBackgroundChar = '\u2593';
 
             var progressWidth = (int)(progress * writer.WindowWidth);
 
-            var progressIndicator = "";
+            var spinner = "";
             if (progress < 1)
             {
-                if (_lastProgressIndicatorTime.Add(SpinnerProgressInterval) <= DateTime.UtcNow)
-                {
-                    var lastProgressIndicatorIndex = ProgressIndicatorChars.IndexOf(_lastProgressIndicator);
-                    var nextProgressIndicator = ProgressIndicatorChars[(lastProgressIndicatorIndex + 1) % ProgressIndicatorChars.Length];
-
-                    _lastProgressIndicator = nextProgressIndicator;
-                    _lastProgressIndicatorTime = DateTime.UtcNow;
-                }
-
-                progressIndicator = _lastProgressIndicator.ToString();
+                spinner = _spinner.ToString();
             }
 
-            // todo: integrate this
+            // todo: integrate this?
             Console.CursorVisible = false;
 
             var progressInfoLeft = $" {progress:P} ({Current} of {count}) {Name}";
@@ -141,51 +119,20 @@ namespace Jacere.ConsoleProgress
 
             writer
                 .Background(color).Write("".PadRight(progressWidth))
-                .Foreground(color).Write(progressIndicator)
-                .WriteLine("".PadRight(writer.WindowWidth - progressWidth - progressIndicator.Length, progressBackgroundChar))
+                .Foreground(color).Write(spinner)
+                .WriteLine("".PadRight(writer.WindowWidth - progressWidth - spinner.Length, progressBackgroundChar))
                 .Foreground(color).WriteLine($"{progressInfoLeft}{"".PadRight(writer.WindowWidth - progressInfoLeft.Length - progressInfoRight.Length)}{progressInfoRight}")
                 ;
 
             foreach (var counter in _counters.Values)
             {
-                var value = counter.Formatter != null
-                    ? counter.Formatter(counter.Current)
-                    : counter.Current.ToString("n0");
-                writer.WriteLine($"  {counter.Name}: {value}");
+                writer.WriteLine($"  {counter.Name}: {counter.FormattedValue}");
             }
         }
 
         public ProgressCounter Counter(string name)
         {
             return _counters.GetOrAdd(name, x => new ProgressCounter(x));
-        }
-
-        public void SetCount(long total)
-        {
-            if (_countable != null)
-            {
-                throw new InvalidOperationException("count is already initialized");
-            }
-
-            if (!_total.HasValue)
-            {
-                _start = DateTime.UtcNow;
-            }
-            _total = total;
-        }
-
-        public void SetCount(ICount countable)
-        {
-            if (_countable != null || _total.HasValue)
-            {
-                throw new InvalidOperationException("count is already initialized");
-            }
-            _countable = countable;
-        }
-
-        public void Complete()
-        {
-            _complete = true;
         }
 
         public void Dispose()
@@ -197,11 +144,11 @@ namespace Jacere.ConsoleProgress
 
             // todo: show different output for !/complete, depending on settings
 
-            var totalTime = DateTime.UtcNow - _init;
+            //var totalTime = DateTime.UtcNow - _init;
 
             // todo: turn progress bar green, for instance?
 
-            WriteStuff(ConsoleColor.Green);
+            Write(ConsoleColor.Green);
         }
     }
 }

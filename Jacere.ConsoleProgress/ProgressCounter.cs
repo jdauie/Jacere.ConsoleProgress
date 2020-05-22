@@ -10,17 +10,24 @@ namespace Jacere.ConsoleProgress
         private long _current;
 
         public long Current => _current;
+        public long? Total => Countable?.Count;
+        public ICountable Countable { get; private set; }
 
-        public Func<long, string> Formatter { get; private set; }
+        public Func<ProgressCounter, string> Formatter { get; private set; }
+
+        public string FormattedValue => Formatter != null
+            ? Formatter(this)
+            : Current.ToString("n0");
 
         public ProgressCounter(string name)
         {
             Name = name;
         }
 
-        public void Format(Func<long, string> format)
+        public ProgressCounter Format(Func<ProgressCounter, string> format)
         {
             Formatter = format;
+            return this;
         }
 
         public void Increment()
@@ -36,6 +43,33 @@ namespace Jacere.ConsoleProgress
         public void Set(long current)
         {
             Interlocked.Exchange(ref _current, current);
+        }
+
+        public void SetCount(long total)
+        {
+            SetCount(new StaticCountable(total));
+        }
+
+        public ProgressCounter SetCount(ICountable countable)
+        {
+            if (Countable != null)
+            {
+                throw new InvalidOperationException("count is already initialized");
+            }
+            Countable = countable;
+            return this;
+        }
+
+        private class StaticCountable : ICountable
+        {
+            public DateTime? Started { get; }
+            public long? Count { get; }
+
+            public StaticCountable(long total)
+            {
+                Started = DateTime.UtcNow;
+                Count = total;
+            }
         }
     }
 }
